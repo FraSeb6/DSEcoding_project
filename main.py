@@ -21,67 +21,25 @@ script_directory = os.path.dirname(os.path.abspath(__file__))
 os.chdir(script_directory)
 
 
-# Titolo dell'app
-st.title("Benvenuto nella mia prima app con Streamlit!")
 
-# Creazione di un widget di input di testo
-nome = st.text_input("Qual è il tuo nome?")
-
-# Creazione di un pulsante
-if st.button("Saluta!"):
-    st.write(f"Ciao, {nome}!")
-
-# Grafici e visualizzazione di dati
-
-# Dati casuali
-dati = pd.DataFrame(np.random.randn(10, 2), columns=["Colonna 1", "Colonna 2"])
-st.line_chart(dati)
-
-
-
-
-
-# Carica i dati della temperatura per paese
-temp_data = pd.read_csv("C:/Users/Francesco/Documenti/GitHub/DSEcoding_project/GlobalLandTemperaturesByCountry.csv")
-
-
-print(temp_data.head())
-"""
-
-# Filtra le righe per evitare valori nulli e seleziona le colonne utili
-temp_data = temp_data[['Country', 'AverageTemperature']].dropna()
-
-# Calcola la temperatura media per ogni paese
-average_temp_by_country = temp_data.groupby('Country')['AverageTemperature'].mean().reset_index()
-
-# Carica la mappa dei paesi usando geopandas
-world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
-
-# Associa i dati delle temperature ai dati geografici
-world = world.merge(average_temp_by_country, left_on="name", right_on="Country", how="left")
-
-# Funzione per visualizzare la mappa
-def plot_map(data):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 10))
-    data.plot(column='AverageTemperature', cmap='coolwarm', linewidth=0.8, ax=ax, edgecolor='0.8', legend=True)
-    plt.title("Temperature Medie per Paese")
-    return fig
-
-# Configura l'interfaccia Streamlit
-st.title("Mappa delle Temperature Medie Globali")
-st.write("Questa mappa mostra le temperature medie dei vari paesi.")
-
-# Mostra la mappa con Streamlit
-fig = plot_map(world)
-st.pyplot(fig)
-"""
-
-"""
-import os.path
-import zipfile
 import pandas as pd
-import urllib.request
 
+# Percorsi dei file caricati dall'utente
+file_paths = {
+    "country_temperatures": "/mnt/data/GlobalLandTemperaturesByCountry.csv",
+    "city_temperatures": "/mnt/data/GlobalLandTemperaturesByMajorCity.csv",
+    "state_temperatures": "/mnt/data/GlobalLandTemperaturesByState.csv",
+    "global_temperatures": "/mnt/data/GlobalTemperatures.csv"
+}
+
+# Leggiamo il contenuto dei file
+datasets = {name: pd.read_csv(path) for name, path in file_paths.items()}
+
+# Visualizziamo i primi 5 record di ogni dataset per verificarne il contenuto
+{key: data.head() for key, data in datasets.items()}
+
+
+"""
 
 
 if not os.path.exists("dataset"):
