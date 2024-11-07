@@ -2,9 +2,17 @@ import os
 import streamlit as st
 import numpy as np
 import pandas as pd
+import geopandas as gpd
+import matplotlib.pyplot as plt
 
+"""No, non è necessario sostituire __file__ con il nome del tuo file. __file__ è una variabile speciale di Python che rappresenta il percorso del file di script attualmente in esecuzione. Questo codice funziona automaticamente per qualsiasi file, ottenendo la directory in cui si trova il file stesso.
 
-import os
+Ecco cosa fa il codice:
+
+os.path.abspath(__file__): restituisce il percorso assoluto del file di script in esecuzione.
+os.path.dirname(...): ottiene solo la directory di quel percorso.
+os.chdir(script_directory): imposta questa directory come directory di lavoro.
+Quindi, mantenendo __file__, il codice funziona senza bisogno di modifiche quando lo sposti o lo esegui in directory diverse."""
 
 # Ottieni la directory dello script corrente
 script_directory = os.path.dirname(os.path.abspath(__file__))
@@ -29,6 +37,44 @@ if st.button("Saluta!"):
 dati = pd.DataFrame(np.random.randn(10, 2), columns=["Colonna 1", "Colonna 2"])
 st.line_chart(dati)
 
+
+
+
+
+# Carica i dati della temperatura per paese
+temp_data = pd.read_csv("C:/Users/Francesco/Documenti/GitHub/DSEcoding_project/GlobalLandTemperaturesByCountry.csv")
+
+
+print(temp_data.head())
+"""
+
+# Filtra le righe per evitare valori nulli e seleziona le colonne utili
+temp_data = temp_data[['Country', 'AverageTemperature']].dropna()
+
+# Calcola la temperatura media per ogni paese
+average_temp_by_country = temp_data.groupby('Country')['AverageTemperature'].mean().reset_index()
+
+# Carica la mappa dei paesi usando geopandas
+world = gpd.read_file(gpd.datasets.get_path('naturalearth_lowres'))
+
+# Associa i dati delle temperature ai dati geografici
+world = world.merge(average_temp_by_country, left_on="name", right_on="Country", how="left")
+
+# Funzione per visualizzare la mappa
+def plot_map(data):
+    fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+    data.plot(column='AverageTemperature', cmap='coolwarm', linewidth=0.8, ax=ax, edgecolor='0.8', legend=True)
+    plt.title("Temperature Medie per Paese")
+    return fig
+
+# Configura l'interfaccia Streamlit
+st.title("Mappa delle Temperature Medie Globali")
+st.write("Questa mappa mostra le temperature medie dei vari paesi.")
+
+# Mostra la mappa con Streamlit
+fig = plot_map(world)
+st.pyplot(fig)
+"""
 
 """
 import os.path
