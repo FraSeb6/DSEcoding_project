@@ -1,0 +1,16 @@
+import streamlit as st
+
+APP_TITLE = "Grafic Visualizazation of data on a map"
+APP_SUBTITLE = "This is a simple example of how to visualize data on a map using Streamlit and Folium"
+
+def main_graphic_visualization():
+    st.set_page_config(page_title=APP_TITLE, page_icon=":earth_americas:", layout="wide")
+    st.title(APP_TITLE)
+    st.caption(APP_SUBTITLE)
+    
+    #load data
+    
+    #display filters and map
+    
+if __name__ == "__main__":
+    main_graphic_visualization()
