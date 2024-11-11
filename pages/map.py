@@ -127,27 +127,27 @@ m = folium.Map(location=[dataframe_filtered_by_year['Latitude'].mean(), datafram
 marker_cluster = MarkerCluster().add_to(m)
 
 for _, row in dataframe_filtered_by_year.iterrows():
-    
+    #create a pop up text
     popup_text = f"""
     <b>City:</b> {row['City']}<br>
     <b>Country:</b> {row['Country']}<br>
     <b>Temperature:</b> {row['Average_annual_temperature']}°C<br>
     <b>Coordinates:</b> ({row['Latitude']}, {row['Longitude']})
     """
-    
+    #add a marker to the map
     folium.CircleMarker(
         location=[row['Latitude'], row['Longitude']],
         radius=8,
         color=row['Color_hex'],
         fill=True,
         fill_color=row['Color_hex'],
-        fill_opacity=0.5,
+        fill_opacity=0.8,
         popup=folium.Popup(popup_text, max_width=200)
-    ).add_to(m)
+    ).add_to(marker_cluster) #add the marker to the cluster |     m or marker_cluster
     
-
-     
+#add the layer control
 st_folium(m, width=700, height=500)
+
 st.write(":red[DISCLAIMER: the coordinates are not accurate].")
 
 
