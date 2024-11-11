@@ -22,7 +22,7 @@ def load_data(table_name):
     else:
         return None
 
-def convert_to_date(df, column_name):
+def convert_to_datetype(df, column_name):
     df[column_name] = pd.to_datetime(df[column_name], errors='coerce')
     return df
 
@@ -71,6 +71,38 @@ def convert_coordinates(df, lat_column, lon_column):
     df[lon_column] = df[lon_column].apply(convert_lon)
     return df
 
+def conveart_corrdinates_floattype(df, lat_column, lon_column):
+    df[lat_column] = pd.to_numeric(df[lat_column], errors='coerce')
+    df[lon_column] = pd.to_numeric(df[lon_column], errors='coerce')
+    return df
+"""
+def convert_to_geodataframe(df, lat_column, lon_column):
+    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[lon_column], df[lat_column]))
+    return gdf
+
+def plot_map(gdf, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
+    fig, ax = plt.subplots(1, 1, figsize=(15, 10))
+    gdf.plot(column=temperature_column, cmap=colormap_name, legend=True, ax=ax)
+    plt.show()
+    
+def plot_map_folium(gdf, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
+    m = folium.Map(location=[gdf['Latitude'].mean(), gdf['Longitude'].mean()], zoom_start=2)
+    colormap = plt.get_cmap(colormap_name)
+    norm = plt.Normalize(gdf[temperature_column].min(), gdf[temperature_column].max())
+    for _, row in gdf.iterrows():
+        folium.CircleMarker(
+            location=[row['Latitude'], row['Longitude']],
+            radius=8,
+            color=rgba_to_hex(colormap(norm(row[temperature_column]))),
+            fill=True,
+            fill_color=rgba_to_hex(colormap(norm(row[temperature_column]))),
+            fill_opacity=0.8,
+            popup=f"{row['City']}, {row['Country']}: {row[temperature_column]}°C"
+        ).add_to(m)
+    st_folium(m, width=700, height=500)
+    
+"""
+
 def add_color_column(df, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
     colormap = plt.get_cmap(colormap_name)
     norm = plt.Normalize(df[temperature_column].min(), df[temperature_column].max())
@@ -84,6 +116,9 @@ def rgba_to_hex(rgba):
 def get_unique_city_data(df):
     unique_cities = df.drop_duplicates(subset=['City'])
     return unique_cities
+
+
+
 selected_table = st.selectbox(
     "Select a table",
     ["major_city", "city"]
@@ -93,7 +128,7 @@ st.write(f"Displaying data from {selected_table} table")
 
 dataframe_selected= load_data(selected_table)
 
-dataframe_selected = convert_to_date(dataframe_selected, "dt")
+dataframe_selected = convert_to_datetype(dataframe_selected, "dt")
 
 min_year, max_year = get_year_range(dataframe_selected, "dt")
 
@@ -104,8 +139,9 @@ dataframe_filtered_by_year = filter_data_by_year(dataframe_selected, "dt", selec
 dataframe_filtered_by_year = add_average_annual_temperature(dataframe_filtered_by_year, "dt", "AverageTemperature")
 
 dataframe_filtered_by_year = convert_coordinates(dataframe_filtered_by_year, "Latitude", "Longitude")
-dataframe_filtered_by_year["Latitude"] = pd.to_numeric(dataframe_filtered_by_year["Latitude"], errors='coerce')
-dataframe_filtered_by_year["Longitude"] = pd.to_numeric(dataframe_filtered_by_year["Longitude"], errors='coerce')
+
+#da inserire nelle rispettive funzioni 
+dataframe_filtered_by_year = conveart_corrdinates_floattype(dataframe_filtered_by_year, "Latitude", "Longitude")
 
 dataframe_filtered_by_year = add_color_column(dataframe_filtered_by_year)
 
@@ -124,7 +160,11 @@ st.write(dataframe_filtered_by_year)
 m = folium.Map(location=[dataframe_filtered_by_year['Latitude'].mean(), dataframe_filtered_by_year['Longitude'].mean()], zoom_start=2)
 
 # Aggiungi un cluster di marker
-marker_cluster = MarkerCluster().add_to(m)
+#    marker_cluster = MarkerCluster().add_to(m)
+
+
+#@st.cache_data save the date in cache to avoid to reload the data every time
+
 
 for _, row in dataframe_filtered_by_year.iterrows():
     #create a pop up text
@@ -143,7 +183,7 @@ for _, row in dataframe_filtered_by_year.iterrows():
         fill_color=row['Color_hex'],
         fill_opacity=0.8,
         popup=folium.Popup(popup_text, max_width=200)
-    ).add_to(marker_cluster) #add the marker to the cluster |     m or marker_cluster
+    ).add_to(m) #add the marker to the cluster |     m or marker_cluster
     
 #add the layer control
 st_folium(m, width=700, height=500)
