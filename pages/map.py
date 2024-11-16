@@ -190,6 +190,8 @@ st_folium(m, width=700, height=500)
 
 st.write(":red[DISCLAIMER: the coordinates are not accurate].")
 
+dataframe_filtered_by_year.to_csv('dataframe_pulito.csv', index=False)
+
 
 
 
