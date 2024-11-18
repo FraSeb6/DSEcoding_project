@@ -7,18 +7,18 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 
-
+@st.cache_data
 def load_data(table_name):
     if table_name == "country":
-        return pd.read_csv('.\\dataset\\GlobalLandTemperaturesByCountry.csv')
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByCountry.csv')
     elif table_name == "city":
-        return pd.read_csv('.\\dataset\\GlobalLandTemperaturesByCity.csv')
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByCity.csv')
     elif table_name == "major_city":
-        return pd.read_csv('.\\dataset\\GlobalLandTemperaturesByMajorCity.csv')
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByMajorCity.csv')
     elif table_name == "state":
-        return pd.read_csv('.\\dataset\\GlobalLandTemperaturesByState.csv')
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByState.csv')
     elif table_name == "global_temp_country":
-        return pd.read_csv('.\\dataset\\GlobalTemperatures.csv')
+        return pd.read_csv('./dataset/GlobalTemperatures.csv')
     else:
         return None
 
@@ -75,33 +75,7 @@ def conveart_corrdinates_floattype(df, lat_column, lon_column):
     df[lat_column] = pd.to_numeric(df[lat_column], errors='coerce')
     df[lon_column] = pd.to_numeric(df[lon_column], errors='coerce')
     return df
-"""
-def convert_to_geodataframe(df, lat_column, lon_column):
-    gdf = gpd.GeoDataFrame(df, geometry=gpd.points_from_xy(df[lon_column], df[lat_column]))
-    return gdf
 
-def plot_map(gdf, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
-    fig, ax = plt.subplots(1, 1, figsize=(15, 10))
-    gdf.plot(column=temperature_column, cmap=colormap_name, legend=True, ax=ax)
-    plt.show()
-    
-def plot_map_folium(gdf, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
-    m = folium.Map(location=[gdf['Latitude'].mean(), gdf['Longitude'].mean()], zoom_start=2)
-    colormap = plt.get_cmap(colormap_name)
-    norm = plt.Normalize(gdf[temperature_column].min(), gdf[temperature_column].max())
-    for _, row in gdf.iterrows():
-        folium.CircleMarker(
-            location=[row['Latitude'], row['Longitude']],
-            radius=8,
-            color=rgba_to_hex(colormap(norm(row[temperature_column]))),
-            fill=True,
-            fill_color=rgba_to_hex(colormap(norm(row[temperature_column]))),
-            fill_opacity=0.8,
-            popup=f"{row['City']}, {row['Country']}: {row[temperature_column]}°C"
-        ).add_to(m)
-    st_folium(m, width=700, height=500)
-    
-"""
 
 def add_color_column(df, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
     colormap = plt.get_cmap(colormap_name)
@@ -163,24 +137,24 @@ m = folium.Map(location=[dataframe_filtered_by_year['Latitude'].mean(), datafram
 #    marker_cluster = MarkerCluster().add_to(m)
 
 
-#@st.cache_data save the date in cache to avoid to reload the data every time
+#save the date in cache to avoid to reload the data every time
 
 
-for _, row in dataframe_filtered_by_year.iterrows():
+for _, column in dataframe_filtered_by_year.iterrows():
     #create a pop up text
     popup_text = f"""
-    <b>City:</b> {row['City']}<br>
-    <b>Country:</b> {row['Country']}<br>
-    <b>Temperature:</b> {row['Average_annual_temperature']}°C<br>
-    <b>Coordinates:</b> ({row['Latitude']}, {row['Longitude']})
+    <b>City:</b> {column['City']}<br>
+    <b>Country:</b> {column['Country']}<br>
+    <b>Temperature:</b> {column['Average_annual_temperature']}°C<br>
+    <b>Coordinates:</b> ({column['Latitude']}, {column['Longitude']})
     """
     #add a marker to the map
     folium.CircleMarker(
-        location=[row['Latitude'], row['Longitude']],
+        location=[column['Latitude'], column['Longitude']],
         radius=8,
-        color=row['Color_hex'],
+        color=column['Color_hex'],
         fill=True,
-        fill_color=row['Color_hex'],
+        fill_color=column['Color_hex'],
         fill_opacity=0.8,
         popup=folium.Popup(popup_text, max_width=200)
     ).add_to(m) #add the marker to the cluster |     m or marker_cluster
@@ -190,7 +164,9 @@ st_folium(m, width=700, height=500)
 
 st.write(":red[DISCLAIMER: the coordinates are not accurate].")
 
-dataframe_filtered_by_year.to_csv('dataframe_pulito.csv', index=False)
+# Rimozione delle righe con valori mancanti in AverageTemperature
+#clean_data = data.dropna(subset=['AverageTemperature']).copy()
+
 
 
 

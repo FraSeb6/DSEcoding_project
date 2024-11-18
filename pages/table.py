@@ -2,13 +2,19 @@ import streamlit as st
 import pandas as pd
 
 # Load the datasets
-def load_data():
-    country                 = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByCountry.csv')
-    city                    = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByCity.csv')
-    major_city              = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByMajorCity.csv')
-    state                   = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByState.csv')
-    global_temp_country     = pd.read_csv('.\\dataset\\GlobalTemperatures.csv')
-    return country, city, major_city, state, global_temp_country
+def load_data(table_name):
+    if table_name == "country":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByCountry.csv')
+    elif table_name == "city":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByCity.csv')
+    elif table_name == "major_city":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByMajorCity.csv')
+    elif table_name == "state":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByState.csv')
+    elif table_name == "global_temp_country":
+        return pd.read_csv('./dataset/GlobalTemperatures.csv')
+    else:
+        return None
 
 
 
@@ -125,18 +131,7 @@ def create_sliders(min_year, max_year, oldest_month_country, last_month_country)
             )
     return year_range, month_range
 
-# convertitor in dataframe 
-def get_dataframe(table):
-    if table == "country":
-        return country
-    elif table == "city":
-        return city
-    elif table == "major_city":
-        return major_city
-    elif table == "state":
-        return state
-    elif table == "global_temp_country":
-        return global_temp_country
+
 
 def get_average_temperature_by_year(df, country, year_range):
     df['dt'] = pd.to_datetime(df['dt'])
@@ -145,14 +140,14 @@ def get_average_temperature_by_year(df, country, year_range):
     return df.groupby('Year')['AverageTemperature'].mean().reset_index()
 
 
-
-
-country, city, major_city, state, global_temp_country = load_data()
-
 table_input = st.selectbox(
     "Select a table",
     ["country", "major_city", "state", "city"]
 )
+
+country = load_data(table_input)
+
+
 
 table_input = get_dataframe(table_input)
 

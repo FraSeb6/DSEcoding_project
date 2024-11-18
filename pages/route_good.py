@@ -8,7 +8,7 @@ from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 from shapely.geometry import Point
 
-
+@st.cache_data
 
 
 
@@ -88,7 +88,7 @@ def create_geodf(df, lat_col='Latitude', lon_col='Longitude'):
     geo_data = gpd.GeoDataFrame(df, geometry=geometry)
     return geo_data
 
-def find_hottest_path(geo_data, start_city, end_city):
+def find_optimized_path(geo_data, start_city, end_city, w_T=0.1, w_D=0.9):
     # Trova i punti di partenza e arrivo
     start = geo_data[geo_data['City'] == start_city]
     end = geo_data[geo_data['City'] == end_city]
@@ -101,21 +101,36 @@ def find_hottest_path(geo_data, start_city, end_city):
     current = start
 
     while current['City'].values[0] != end_city:
-        # Calcola le distanze da tutte le città non ancora visitate
+        # Calcola la distanza da tutte le città non ancora visitate
         remaining = geo_data[~geo_data['City'].isin(path)]
-        remaining['distance'] = remaining.geometry.distance(current.geometry.values[0])
+        remaining['distance_from_current'] = remaining.geometry.distance(current.geometry.values[0])
 
         # Seleziona le tre città più vicine
-        closest = remaining.nsmallest(3, 'distance')
+        closest = remaining.nsmallest(3, 'distance_from_current')
 
-        # Scegli la città più calda tra le tre più vicine
-        next_city = closest.loc[closest['AverageTemperature'].idxmax()]
+        # Controlla se la città di destinazione è tra le più vicine
+        if end_city in closest['City'].values:
+            path.append(end_city)
+            break
+
+        # Calcola la distanza dalla destinazione per il punteggio
+        closest['distance_to_dest'] = closest.geometry.distance(end.geometry.values[0])
+
+        # Calcola il punteggio combinato
+        closest['score'] = (
+            w_T * closest['AverageTemperature'] - w_D * closest['distance_to_dest']
+        )
+
+        # Scegli la città con il punteggio più alto
+        next_city = closest.loc[closest['score'].idxmax()]
 
         # Aggiungi la città scelta al percorso
         path.append(next_city['City'])
         current = geo_data[geo_data['City'] == next_city['City']]
 
     return path
+
+
 
 
 
@@ -154,7 +169,7 @@ arrive = city_selector(filtered_df, 'City', "select the arrive city", start)
 
 
 
-path= find_hottest_path(filtered_df, start, arrive)
+path= find_optimized_path(filtered_df, start, arrive)
 
 st.write(path)
 st.write(filtered_df)
@@ -163,7 +178,6 @@ st.write(filtered_df.dtypes)
 # Create a map centered at the midpoint of the path
 midpoint = filtered_df[filtered_df['City'].isin(path)].geometry.unary_union.centroid
 m = folium.Map(location=[midpoint.y, midpoint.x], zoom_start=5)
-
 # Add markers for each city in the path
 for city in path:
     city_data = filtered_df[filtered_df['City'] == city]
@@ -185,7 +199,18 @@ for city in path:
             weight=2.5,
             opacity=1
         ).add_to(m)
-
+        # Add markers for all other cities not in the path with low opacity
+        for city in filtered_df['City'].unique():
+            if city not in path:
+                city_data = filtered_df[filtered_df['City'] == city]
+                folium.CircleMarker(
+                    location=[city_data.geometry.y.values[0], city_data.geometry.x.values[0]],
+                    radius=3,
+                    color='gray',
+                    fill=True,
+                    fill_color='gray',
+                    fill_opacity=0.2,
+                    opacity=0.2
+                ).add_to(m)
 # Display the map in Streamlit
 st_folium(m, width=700, height=500)
-
