@@ -1,14 +1,18 @@
 import pandas as pd
 import numpy as np
+import streamlit as st
 import matplotlib.pyplot as plt
 import geopandas as gpd
-import streamlit as st
+
+
+
 import folium
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 from shapely.geometry import Point
 
 @st.cache_data
+
 
 
 
@@ -88,7 +92,21 @@ def create_geodf(df, lat_col='Latitude', lon_col='Longitude'):
     geo_data = gpd.GeoDataFrame(df, geometry=geometry)
     return geo_data
 
-def find_optimized_path(geo_data, start_city, end_city, w_T=0.1, w_D=0.9):
+
+
+def calculate_deviation_angle(current_coords, dest_coords, city_coords):
+    """
+    Calcola l'angolo di deviazione tra il vettore corrente-destinazione 
+    e il vettore corrente-città candidata.
+    """
+    vector_to_dest = np.array(dest_coords) - np.array(current_coords)
+    vector_to_city = np.array(city_coords) - np.array(current_coords)
+    cos_theta = np.dot(vector_to_dest, vector_to_city) / (
+        np.linalg.norm(vector_to_dest) * np.linalg.norm(vector_to_city)
+    )
+    return np.arccos(cos_theta)
+
+def find_path(geo_data, start_city, end_city, w_T=0.3, w_D=0.5, w_A=0.2):
     # Trova i punti di partenza e arrivo
     start = geo_data[geo_data['City'] == start_city]
     end = geo_data[geo_data['City'] == end_city]
@@ -105,7 +123,7 @@ def find_optimized_path(geo_data, start_city, end_city, w_T=0.1, w_D=0.9):
         remaining = geo_data[~geo_data['City'].isin(path)]
         remaining['distance_from_current'] = remaining.geometry.distance(current.geometry.values[0])
 
-        # Seleziona le tre città più vicine
+        # Seleziona le città più vicine
         closest = remaining.nsmallest(3, 'distance_from_current')
 
         # Controlla se la città di destinazione è tra le più vicine
@@ -113,12 +131,24 @@ def find_optimized_path(geo_data, start_city, end_city, w_T=0.1, w_D=0.9):
             path.append(end_city)
             break
 
-        # Calcola la distanza dalla destinazione per il punteggio
+        # Calcola la distanza dalla destinazione
         closest['distance_to_dest'] = closest.geometry.distance(end.geometry.values[0])
+
+        # Calcola l'angolo di deviazione
+        closest['deviation_angle'] = closest.apply(
+            lambda x: calculate_deviation_angle(
+                (current.geometry.x.values[0], current.geometry.y.values[0]),
+                (end.geometry.x.values[0], end.geometry.y.values[0]),
+                (x.geometry.x, x.geometry.y)
+            ),
+            axis=1
+        )
 
         # Calcola il punteggio combinato
         closest['score'] = (
-            w_T * closest['AverageTemperature'] - w_D * closest['distance_to_dest']
+            w_T * closest['AverageTemperature'] -
+            w_D * closest['distance_to_dest'] -
+            w_A * closest['deviation_angle']
         )
 
         # Scegli la città con il punteggio più alto
@@ -135,6 +165,83 @@ def find_optimized_path(geo_data, start_city, end_city, w_T=0.1, w_D=0.9):
 
 
 
+def visualize_path(geo_data, path, start_city, end_city):
+    """
+    Visualizza il percorso calcolato su una mappa Folium.
+    - Le città del percorso sono evidenziate e collegate da una linea.
+    - Le città non visitate sono mostrate con opacità minore e includono la temperatura nel popup.
+    """
+    # Crea una mappa centrata sulla città di partenza
+    start_coords = geo_data[geo_data['City'] == start_city].geometry.values[0]
+    m = folium.Map(location=[start_coords.y, start_coords.x], zoom_start=3)
+
+    # Aggiungi tutte le città con bassa opacità e mostra la temperatura nel popup
+    for _, row in geo_data.iterrows():
+        folium.CircleMarker(
+            location=[row.geometry.y, row.geometry.x],
+            radius=4,
+            color="gray",
+            fill=True,
+            fill_color="gray",
+            fill_opacity=0.3,
+            popup=f"{row['City']}<br>Temp: {row['AverageTemperature']:.2f}°C",
+        ).add_to(m)
+
+    # Evidenzia le città del percorso
+    for city in path:
+        city_data = geo_data[geo_data['City'] == city]
+        city_coords = city_data.geometry.values[0]
+        temperature = city_data['AverageTemperature'].values[0]
+        folium.CircleMarker(
+            location=[city_coords.y, city_coords.x],
+            radius=6,
+            color="blue",
+            fill=True,
+            fill_color="blue",
+            fill_opacity=0.6,
+            popup=f"{city}<br>Temp: {temperature:.2f}°C",
+        ).add_to(m)
+
+    # Collega le città del percorso con una linea
+    path_coords = [
+        [geo_data[geo_data['City'] == city].geometry.y.values[0],
+         geo_data[geo_data['City'] == city].geometry.x.values[0]]
+        for city in path
+    ]
+    folium.PolyLine(path_coords, color="blue", weight=2.5, opacity=0.6).add_to(m)
+
+    # Evidenzia la città di partenza in verde e quella di arrivo in rosso
+    start_data = geo_data[geo_data['City'] == start_city]
+    start_coords = start_data.geometry.values[0]
+    start_temp = start_data['AverageTemperature'].values[0]
+    folium.CircleMarker(
+        location=[start_coords.y, start_coords.x],
+        radius=8,
+        color="green",
+        fill=True,
+        fill_color="green",
+        fill_opacity=1,
+        popup=f"Partenza: {start_city}<br>Temp: {start_temp:.2f}°C",
+    ).add_to(m)
+
+    end_data = geo_data[geo_data['City'] == end_city]
+    end_coords = end_data.geometry.values[0]
+    end_temp = end_data['AverageTemperature'].values[0]
+    folium.CircleMarker(
+        location=[end_coords.y, end_coords.x],
+        radius=8,
+        color="red",
+        fill=True,
+        fill_color="red",
+        fill_opacity=1,
+        popup=f"Arrivo: {end_city}<br>Temp: {end_temp:.2f}°C",
+    ).add_to(m)
+
+    return m
+
+
+
+
 
 
 
@@ -143,20 +250,22 @@ selected_table = st.selectbox(
     "Select a table",
     ["major_city", "city"]
 )
-
+col1, col2 = st.columns(2)
 selected_df = load_data(selected_table)
+
 
 selected_table = convert_to_date(selected_df, "dt")
 
-min_year, max_year = get_year_range(selected_df, "dt")
+min_year, max_year = get_year_range(selected_table, "dt")
+with col1:
+    selected_year = year_slider(min_year, max_year)
 
-selected_year = year_slider(min_year, max_year)
 
-min_month, max_month = get_month_range(selected_df, "dt", selected_year)
+min_month, max_month = get_month_range(selected_table, "dt", selected_year)
+with col2:
+    selected_month = month_slider(min_month, max_month)
 
-selected_month = month_slider(min_month, max_month)
-
-filtered_df = filter_data_by_year_month(selected_df, "dt", selected_year, selected_month)
+filtered_df = filter_data_by_year_month(selected_table, "dt", selected_year, selected_month)
 
 filtered_df = filtered_df.dropna(subset=['Latitude', 'Longitude'])
 filtered_df['Latitude'] = filtered_df['Latitude'].apply(convert_coordinate)
@@ -164,53 +273,22 @@ filtered_df['Longitude'] = filtered_df['Longitude'].apply(convert_coordinate)
 
 filtered_df = create_geodf(filtered_df, 'Latitude', 'Longitude')
 
-start = city_selector(filtered_df, 'City', "select the start city")
-arrive = city_selector(filtered_df, 'City', "select the arrive city", start)
+with col1:
+    start = city_selector(filtered_df, 'City', "select the start city")
+
+with col2:
+    arrive = city_selector(filtered_df, 'City', "select the arrive city", start)
 
 
 
-path= find_optimized_path(filtered_df, start, arrive)
+path= find_path(filtered_df, start, arrive)
 
-st.write(path)
-st.write(filtered_df)
-st.write(filtered_df.dtypes)
 
-# Create a map centered at the midpoint of the path
-midpoint = filtered_df[filtered_df['City'].isin(path)].geometry.unary_union.centroid
-m = folium.Map(location=[midpoint.y, midpoint.x], zoom_start=5)
-# Add markers for each city in the path
-for city in path:
-    city_data = filtered_df[filtered_df['City'] == city]
-    folium.Marker(
-        location=[city_data.geometry.y.values[0], city_data.geometry.x.values[0]],
-        popup=city,
-        icon=folium.Icon(color='blue')
-    ).add_to(m)
-    # Add lines connecting the cities in the path
-    for i in range(len(path) - 1):
-        city_data_1 = filtered_df[filtered_df['City'] == path[i]]
-        city_data_2 = filtered_df[filtered_df['City'] == path[i + 1]]
-        folium.PolyLine(
-            locations=[
-                [city_data_1.geometry.y.values[0], city_data_1.geometry.x.values[0]],
-                [city_data_2.geometry.y.values[0], city_data_2.geometry.x.values[0]]
-            ],
-            color='red',
-            weight=2.5,
-            opacity=1
-        ).add_to(m)
-        # Add markers for all other cities not in the path with low opacity
-        for city in filtered_df['City'].unique():
-            if city not in path:
-                city_data = filtered_df[filtered_df['City'] == city]
-                folium.CircleMarker(
-                    location=[city_data.geometry.y.values[0], city_data.geometry.x.values[0]],
-                    radius=3,
-                    color='gray',
-                    fill=True,
-                    fill_color='gray',
-                    fill_opacity=0.2,
-                    opacity=0.2
-                ).add_to(m)
-# Display the map in Streamlit
-st_folium(m, width=700, height=500)
+
+
+
+
+
+st.header("Mappa del percorso calcolato")
+mapa = visualize_path(filtered_df, path, start, arrive)
+st_folium(mapa, width=800, height=600)

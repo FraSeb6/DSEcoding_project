@@ -1,30 +1,58 @@
 
-import os.path
-import zipfile
 import pandas as pd
-import urllib.request
+import geopandas as gpd
+import streamlit as st
+import folium
+from streamlit_folium import st_folium
+from shapely.geometry import Point
 
 
+import matplotlib.pyplot as plt
+import seaborn as sns
 
-if not os.path.exists("dataset"):
-    print("Downloading dataset...\n")
-    urllib.request.urlretrieve("https://drive.usercontent.google.com/download?id=1C_ZIzxojyVbuvkRAGyMdjOqXI0r3ndpT&export=download&authuser=0&confirm=t&uuid=9b7336fe-4c34-4a05-a3cb-9050910b6b37&at=AN_67v2XFPmyMPEvQZFCsujzNMW7%3A1728940914781", "dataset.zip")
-    print("Dataset downloaded successfully!\n")
-
-    print("Extracting dataset...\n")
-    with zipfile.ZipFile("dataset.zip","r") as zip_ref:
-        zip_ref.extractall("dataset")
-    print("Dataset extracted successfully!\n")
-    os.remove("dataset.zip")
-
-global_temperature_csv               = pd.read_csv('.\\dataset\\GlobalTemperatures.csv').to_dict()
-global_temperature_country_df       = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByCountry.csv')
-global_temperature_country_csv       = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByCountry.csv').to_dict()
-global_temperature_majorcity_csv     = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByMajorCity.csv').to_dict()
-global_temperature_city_csv          = pd.read_csv('.\\dataset\\GlobalLandTemperaturesByCity.csv').to_dict()
+def load_data(table_name):
+    if table_name == "country":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByCountry.csv')
+    elif table_name == "city":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByCity.csv')
+    elif table_name == "major_city":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByMajorCity.csv')
+    elif table_name == "state":
+        return pd.read_csv('./dataset/GlobalLandTemperaturesByState.csv')
+    elif table_name == "global_temp_country":
+        return pd.read_csv('./dataset/GlobalTemperatures.csv')
+    else:
+        return None
 
 
-country = input("Enter the country name: ")
+selected_table = st.selectbox(
+    "Select a table",
+    ["major_city", "city"]
+)
 
-# Filter the data for the specified country
-country_data = global_temperature_country_df[global_temperature_country_df['Country'] == country]
+selected_df = load_data(selected_table)
+
+cities = selected_df['City'].unique()
+
+selected_cities = st.multiselect("Seleziona le città", cities, default=cities[:5])
+
+df_filtered = selected_df[selected_df['City'].isin(selected_cities)]
+
+    # Analisi temporale
+st.subheader("Analisi temporale")
+df_filtered['Year'] = pd.to_datetime(df_filtered['dt']).dt.year
+avg_temp_per_year = df_filtered.groupby(['Year', 'City'])['AverageTemperature'].mean().reset_index()
+
+    # Visualizzazione
+fig, ax = plt.subplots(figsize=(10, 6))
+sns.lineplot(data=avg_temp_per_year, x='Year', y='AverageTemperature', hue='City', ax=ax)
+ax.set_title("Variazione delle temperature medie nel tempo")
+ax.set_ylabel("Temperatura Media (°C)")
+st.pyplot(fig)
+
+    # Statistiche
+st.subheader("Statistiche delle variazioni")
+temp_variation = df_filtered.groupby('City')['AverageTemperature'].agg(['max', 'min']).reset_index()
+temp_variation['Range'] = temp_variation['max'] - temp_variation['min']
+st.write(temp_variation)
+
