@@ -18,7 +18,7 @@ st.markdown("""
 # Sidebar for dataset selection
 dataset_option = st.sidebar.radio(
     "Select a dataset to explore:",
-    options=["city", "major_city", "state", "country", "global_temp_country"]
+    options=["major_city", "state", "country", "global_temp_country", "city"]
 )
 
 # Load the selected dataset
@@ -42,8 +42,8 @@ if data is not None:
     selected_year = year_slider(min_year, max_year)
     st.write(f"### Data for the year {selected_year}:")
     
-    # Filter the data based on the selected year
-    data_filtered_by_year = data[data['dt'].dt.year == selected_year]
+    # Filter data for the selected year
+    data_filtered_by_year = filter_data_by_year(data, 'dt', selected_year[0], selected_year[1])
     
     # Show filtered data for the selected year
     st.write(data_filtered_by_year)
