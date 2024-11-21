@@ -21,4 +21,6 @@ Each project should present the following characteristics:
 
 if you want try the project download that dataset
 https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data
-add it in the same level of the pages and modules 
+- call the folder dataset
+- add it in the same level of the pages and modules 
+- after that write in the terminal streamlit run main.py
