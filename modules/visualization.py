@@ -172,3 +172,83 @@ def create_map_with_markers(df):
 def display_map(df):
     map_with_markers = create_map_with_markers(df)
     st_folium(map_with_markers, width=1200, height=800)
+
+
+
+##########################################################################################
+####  DATA VISUALIZATION ROUTE ###########################################################
+
+# Function to visualize the calculated path on a Folium map
+def visualize_path(geo_data, path, start_city, end_city):
+    """
+    Visualizes the calculated path on a Folium map.
+    - The cities in the path are highlighted and connected by a line.
+    - Cities not visited are shown with lower opacity and include the temperature in the popup.
+    """
+    # Create a map centered on the starting city
+    start_coords = geo_data[geo_data['City'] == start_city].geometry.values[0]
+    m = folium.Map(location=[start_coords.y, start_coords.x], zoom_start=3)
+
+    # Add all cities with low opacity and show temperature in the popup
+    for _, row in geo_data.iterrows():
+        folium.CircleMarker(
+            location=[row.geometry.y, row.geometry.x],
+            radius=4,
+            color="gray",
+            fill=True,
+            fill_color="gray",
+            fill_opacity=0.3,
+            popup=f"{row['City']}<br>Temp: {row['AverageTemperature']:.2f}°C",
+        ).add_to(m)
+
+    # Highlight the cities in the path
+    for city in path:
+        city_data = geo_data[geo_data['City'] == city]
+        city_coords = city_data.geometry.values[0]
+        temperature = city_data['AverageTemperature'].values[0]
+        folium.CircleMarker(
+            location=[city_coords.y, city_coords.x],
+            radius=6,
+            color="blue",
+            fill=True,
+            fill_color="blue",
+            fill_opacity=0.6,
+            popup=f"{city}<br>Temp: {temperature:.2f}°C",
+        ).add_to(m)
+
+    # Connect the cities in the path with a line
+    path_coords = [
+        [geo_data[geo_data['City'] == city].geometry.y.values[0],
+         geo_data[geo_data['City'] == city].geometry.x.values[0]]
+        for city in path
+    ]
+    folium.PolyLine(path_coords, color="blue", weight=2.5, opacity=0.6).add_to(m)
+
+    # Highlight the start city in green and the end city in red
+    start_data = geo_data[geo_data['City'] == start_city]
+    start_coords = start_data.geometry.values[0]
+    start_temp = start_data['AverageTemperature'].values[0]
+    folium.CircleMarker(
+        location=[start_coords.y, start_coords.x],
+        radius=8,
+        color="green",
+        fill=True,
+        fill_color="green",
+        fill_opacity=1,
+        popup=f"Start: {start_city}<br>Temp: {start_temp:.2f}°C",
+    ).add_to(m)
+
+    end_data = geo_data[geo_data['City'] == end_city]
+    end_coords = end_data.geometry.values[0]
+    end_temp = end_data['AverageTemperature'].values[0]
+    folium.CircleMarker(
+        location=[end_coords.y, end_coords.x],
+        radius=8,
+        color="red",
+        fill=True,
+        fill_color="red",
+        fill_opacity=1,
+        popup=f"End: {end_city}<br>Temp: {end_temp:.2f}°C",
+    ).add_to(m)
+
+    return m

@@ -1,6 +1,8 @@
 import pandas as pd
 import pandas as pd
 import streamlit as st
+import geopandas as gpd
+from shapely.geometry import Point
 from modules.operations import *
 from modules.visualization import *
 
@@ -135,3 +137,29 @@ def add_color_column_with_hex(df, temperature_column='Average_annual_temperature
 def get_unique_city_data(df):
     unique_cities = df.drop_duplicates(subset=['City'])
     return unique_cities
+
+def get_month_range(df, date_column, year):
+    df_year = df[df[date_column].dt.year == year]
+    min_month = df_year[date_column].min().month
+    max_month = df_year[date_column].max().month
+    return min_month, max_month
+
+def filter_data_by_year_month(df, date_column, year, month):
+    df_filtered = df[(df[date_column].dt.year == year) & (df[date_column].dt.month == month)]
+    df_filtered = df_filtered.dropna(subset=['AverageTemperature'])
+    return df_filtered
+
+def city_selector(df, column_name, phrase, exclude_city=None):
+    cities = df[column_name].unique()
+    if exclude_city:
+        cities = [city for city in cities if city != exclude_city]  #This line uses a list comprehension to create a new list of cities. Here's how it works:
+                                                                    # city for city in cities: This part iterates over each city in the original cities list.
+                                                                    #if city != exclude_city: This condition filters out any city that matches the exclude_city value.
+    selected_city = st.selectbox(phrase, cities)
+    return selected_city
+
+# Function to create a GeoDataFrame with city geometries
+def create_geodf(df, lat_col='Latitude', lon_col='Longitude'):
+    geometry = [Point(xy) for xy in zip(df['Longitude'], df['Latitude'])]
+    geo_data = gpd.GeoDataFrame(df, geometry=geometry)
+    return geo_data
