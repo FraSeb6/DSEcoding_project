@@ -7,7 +7,7 @@ import folium
 from streamlit_folium import st_folium
 from folium.plugins import MarkerCluster
 
-@st.cache_data
+
 def load_data(table_name):
     if table_name == "country":
         return pd.read_csv('./dataset/GlobalLandTemperaturesByCountry.csv')

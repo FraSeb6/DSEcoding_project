@@ -1,189 +1,88 @@
 import streamlit as st
 import pandas as pd
+from modules.data_processing import *
+from modules.visualization import *
+from modules.operations import *
 
-# Load the datasets
-def load_data(table_name):
-    if table_name == "country":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByCountry.csv')
-    elif table_name == "city":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByCity.csv')
-    elif table_name == "major_city":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByMajorCity.csv')
-    elif table_name == "state":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByState.csv')
-    elif table_name == "global_temp_country":
-        return pd.read_csv('./dataset/GlobalTemperatures.csv')
-    else:
-        return None
-
-
-
-#df: This is the DataFrame that contains your data.
-#date_column: The name of the column in the DataFrame that contains date values.
-#country_column: (countryal) The name of the column that contains country information.
-#country_value: (countryal) The specific country value you want to filter by.
-
-def get_min_year(df, date_column, country_column=None, country_value=None):
-    df[date_column] = pd.to_datetime(df[date_column])
-    if country_column and country_value:
-        df = df[df[country_column] == country_value]
-    return df[date_column].dt.year.min()
-
-def get_max_year(df, date_column, country_column=None, country_value=None):
-    df[date_column] = pd.to_datetime(df[date_column])
-    if country_column and country_value:
-        df = df[df[country_column] == country_value]
-    return df[date_column].dt.year.max()
-
-def get_oldest_month_country(df, date_column, country_column=None, country_value=None):
-    df[date_column] = pd.to_datetime(df[date_column])
-    if country_column and country_value:
-        df = df[df[country_column] == country_value]
-    oldest_year = df[date_column].dt.year.min()
-    oldest_month = df[df[date_column].dt.year == oldest_year][date_column].dt.month.min()#Questa riga filtra il DataFrame per includere solo le righe dove l'anno della data è uguale all'anno più antico trovato nel passaggio precedente. Poi, estrae il mese da queste date e trova il mese più antico utilizzando il metodo min().
-    return oldest_month
-
-def get_last_month_country(df, date_column, country_column=None, country_value=None):
-    df[date_column] = pd.to_datetime(df[date_column])
-    if country_column and country_value:
-        df = df[df[country_column] == country_value]
-    last_year = df[date_column].dt.year.max()
-    last_month = df[df[date_column].dt.year == last_year][date_column].dt.month.max()
-    return last_month
-
-def filter_and_display_data():
-    if 'Country' in table_input.columns:
-        country_selected = st.selectbox(
-            "Select a country",
-            table_input['Country'].unique()
-        )
-        min_year = get_min_year(table_input, 'dt', 'Country', country_selected)
-        max_year = get_max_year(table_input, 'dt', 'Country', country_selected)
-        oldest_month_country = get_oldest_month_country(country, 'dt', 'Country', country_selected)
-        last_month_country = get_last_month_country(country, 'dt', 'Country', country_selected)
-    else:
-        min_year = get_min_year(table_input, 'dt')
-        max_year = get_max_year(table_input, 'dt')
-        oldest_month_country = get_oldest_month_country(country, 'dt')
-        last_month_country = get_last_month_country(country, 'dt')
-    return min_year, max_year, oldest_month_country, last_month_country, country_selected
-        
-#slider per anni e mesi in base a country
-def create_sliders(min_year, max_year, oldest_month_country, last_month_country):
-    if 'Country' in table_input.columns:
-        year_range = st.slider(        
-            "Select a range of years",
-            min_value=min_year,         
-            max_value=max_year,         
-            value=(min_year, max_year)
-        )
-        if min_year == max_year:
-            month_range = st.slider(
-                "Select a range of months",
-                min_value=oldest_month_country,
-                max_value=last_month_country,
-                value=(oldest_month_country, last_month_country)
-            )
-        else:
-            if min_year == year_range[0]:
-                min_month = oldest_month_country
-            else:
-                min_month = 1
-            if max_year == year_range[1]:
-                max_month = last_month_country
-            else:
-                max_month = 12
-            month_range = st.slider(
-                "Select a range of months",
-                min_value=min_month,
-                max_value=max_month,
-                value=(min_month, max_month)
-            )
-    else:
-        year_range = st.slider(
-            "Select a range of years",
-            min_value=min_year,          
-            max_value=max_year,          
-            value=(min_year, max_year)
-        )
-        if min_year == max_year:
-            month_range = st.slider(
-                "Select a range of months",
-                min_value=oldest_month_country,
-                max_value=last_month_country,
-                value=(oldest_month_country, last_month_country)
-            )
-        else:
-            if min_year == year_range[0]:
-                min_month = oldest_month_country
-            else:
-                min_month = 1
-            if max_year == year_range[1]:
-                max_month = last_month_country
-            else:
-                max_month = 12
-            # Sistemazione dell'indentazione qui:
-            month_range = st.slider(
-                "Select a range of months",
-                min_value=min_month,
-                max_value=max_month,
-                value=(min_month, max_month)
-            )
-    return year_range, month_range
-
-
-
-def get_average_temperature_by_year(df, country, year_range):
-    df['dt'] = pd.to_datetime(df['dt'])
-    df = df[(df['Country'] == country) & (df['dt'].dt.year >= year_range[0]) & (df['dt'].dt.year <= year_range[1])]
-    df['Year'] = df['dt'].dt.year
-    return df.groupby('Year')['AverageTemperature'].mean().reset_index()
-
-
-table_input = st.selectbox(
-    "Select a table",
-    ["country", "major_city", "state", "city"]
+# Carica il dataset delle città
+dataset_option = st.sidebar.radio(
+    "Seleziona un dataset da visualizzare",
+    options=["major_city", "state", "country", "city"]
 )
 
-country = load_data(table_input)
+# Carica il dataset
+data = load_data(dataset_option)
+
+if dataset_option == "major_city" or dataset_option == "city":
+    st.write(f"Dataset: {dataset_option}")
+    
+    # Converte la colonna 'dt' in formato datetime
+    data = convert_to_datetype(data, 'dt')
+
+    # Ottieni l'intervallo degli anni
+    min_year, max_year = get_year_range(data, 'dt')
+
+    # Ottieni la lista delle città selezionate, con le due città di default
+    cities_selected = multieselector_place(data, 'City', default_place=['New York', 'Los Angeles'])
+
+    # Filtro dei dati in base alle città selezionate
+    filtered_data_for_desc = filter_data_by_year(data, 'dt', min_year, max_year)
+    filtered_data_for_desc = filtered_data_for_desc[filtered_data_for_desc['City'].isin(cities_selected)]
+
+    # Calcola le statistiche descrittive per le città selezionate
+    stats_df = generate_stats_df(filtered_data_for_desc, cities_selected, 'City', 'AverageTemperature')
+
+    # Mostra la tabella delle statistiche descrittive con i nomi delle città come indice
+    st.write("Statistiche Descrittive delle Temperature per le Città Selezionate:")
+    st.dataframe(stats_df)
+
+    # Range slider per selezionare un intervallo di anni
+    selected_year_range = year_slider(min_year, max_year)
+
+    # Filtra i dati in base all'intervallo di anni selezionato
+    filtered_data = filter_data_by_year(data, 'dt', selected_year_range[0], selected_year_range[1])
+
+    # Mostra il grafico in base alla selezione
+    # Per tracciare il grafico selezionato per le città
+    display_chart(filtered_data, place_selected=cities_selected, place_column='City', temp_column='AverageTemperature')
 
 
 
-table_input = get_dataframe(table_input)
+elif dataset_option == "state" or dataset_option == "country":
+    st.write(f"Dataset: {dataset_option}")
+    
+    # Converte la colonna 'dt' in formato datetime
+    data = convert_to_datetype(data, 'dt')
 
-col1, col2 = st.columns(2)
+    # Ottieni l'intervallo degli anni
+    min_year, max_year = get_year_range(data, 'dt')
+
+    # Ottieni la lista delle città selezionate, con le due città di default
+    countries_selected = multieselector_place(data, 'Country', default_place=['United States', 'Canada'])
+
+    # Filtro dei dati in base alle città selezionate
+    filtered_data = filter_data_by_year(data, 'dt', min_year, max_year)
+    filtered_data = filtered_data[filtered_data['Country'].isin(countries_selected)]
+
+    # Calcola le statistiche descrittive per le città selezionate
+    stats_df = generate_stats_df(filtered_data, countries_selected, 'Country')
+
+    # Mostra la tabella delle statistiche descrittive con i nomi delle città come indice
+    st.write("Statistiche Descrittive delle Temperature per le Città Selezionate:")
+    st.dataframe(stats_df)
+
+    # Range slider per selezionare un intervallo di anni
+    selected_year_range = year_slider(min_year, max_year)
+
+    # Filtra i dati in base all'intervallo di anni selezionato
+    filtered_data = filter_data_by_year(data, 'dt', selected_year_range[0], selected_year_range[1])
+
+    # Mostra il grafico in base alla selezione
+    # Per tracciare il grafico selezionato per le città
+    # Per tracciare il grafico selezionato per i paesi
+    display_chart(filtered_data, place_selected=countries_selected, place_column='Country', temp_column='AverageTemperature')
 
 
 
-
-
-
-with col1:
-    min_year_input , max_year_input , oldest_month_country_input , last_month_country_input , country_input = filter_and_display_data()
-
-with col2:
-    year_range, month_range = create_sliders(min_year_input , max_year_input , oldest_month_country_input , last_month_country_input)
-
-average_temperature_by_year = get_average_temperature_by_year(table_input, country_input, year_range)
-
-if 'Country' in table_input.columns:
-    filtered_data = table_input[
-        (table_input['Country'] == country_input) &
-        (table_input['dt'].dt.year >= year_range[0]) &
-        (table_input['dt'].dt.year <= year_range[1]) &
-        (table_input['dt'].dt.month >= month_range[0]) &
-        (table_input['dt'].dt.month <= month_range[1])
-    ]
 else:
-    filtered_data = table_input[
-        (table_input['dt'].dt.year >= year_range[0]) &
-        (table_input['dt'].dt.year <= year_range[1]) &
-        (table_input['dt'].dt.month >= month_range[0]) &
-        (table_input['dt'].dt.month <= month_range[1])
-    ]
-
-st.write(filtered_data)
-
-#Visualizza un grafico a linee per la colonna 'AverageTemperature' del DataFrame filtrato.
-linechart = st.line_chart(filtered_data.set_index('dt')['AverageTemperature'])
-linechart_average = st.line_chart(average_temperature_by_year.set_index('Year')['AverageTemperature'])
+    st.write("Dataset non valido o assente.")
