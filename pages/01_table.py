@@ -4,6 +4,10 @@ from modules.data_processing import *
 from modules.visualization import *
 from modules.operations import *
 
+# Set the page title
+st.set_page_config(page_title="Dataset Table", layout="wide")
+st.title("TABLE OF GLOBAL TEMPERATURE DATA")
+
 # Carica il dataset delle città
 dataset_option = st.sidebar.radio(
     "Seleziona un dataset da visualizzare",

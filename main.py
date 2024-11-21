@@ -5,6 +5,7 @@ from modules.data_processing import *
 # Set the page title
 st.set_page_config(page_title="Global Temperature Data Analysis", layout="wide")
 
+
 # Introduction to the project
 st.title("Welcome to the Global Temperature Data Analysis Project")
 st.markdown("""

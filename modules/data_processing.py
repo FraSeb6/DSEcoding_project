@@ -41,52 +41,7 @@ def get_year_range(df, date_column):
     max_year = df[date_column].max().year
     return min_year, max_year
 
-def multieselector_place(data, colum_name, default_place=['New York', 'Los Angeles']):
-    """
-    Restituisce la lista delle città selezionate dall'utente nel multiselect.
-    Se l'utente non seleziona altre città, restituisce le due città predefinite.
 
-    Parameters:
-    - data: DataFrame contenente i dati delle città.
-    - default_place: Lista delle due città predefinite (di default 'New York' e 'Los Angeles').
-
-    Returns:
-    - place_selected: Lista delle città selezionate dall'utente.
-    """
-    # Multiselect per selezionare le città, con due città di default
-    place_selected = st.multiselect(
-        "Seleziona le città",
-        options=data[colum_name].unique(),
-        default=default_place  # Impostiamo due città di default
-    )
-
-    # Se non è stata selezionata nessuna città, usiamo le città predefinite
-    if len(place_selected) == 0:
-        st.warning("Per favore, seleziona almeno una città.")  # Mostra un avviso se nessuna città è selezionata
-        place_selected = default_place  # Se nessuna città è selezionata, rimpiazziamo con le città di default
-
-    return place_selected
-
-# Funzione per creare uno slider che consenta di selezionare un anno
-def year_slider(min_year, max_year):
-    """
-    Crea uno slider per selezionare un intervallo of years.
-    
-    Parameters:
-    - min_year: L'anno minimo.
-    - max_year: L'anno massimo.
-    
-    Returns:
-    - selected_year: L'anno selezionato tramite lo slider.
-    """
-    selected_year_range = st.slider(
-        "Seleziona un intervallo di anni",
-        min_value=min_year,
-        max_value=max_year,
-        value=(min_year, max_year),
-        step=1
-    )
-    return selected_year_range
 
 # Funzione per filtrare i dati in base all'anno selezionato
 def filter_data_by_year(df, date_column, min_year, max_year):
@@ -135,3 +90,48 @@ def generate_stats_df(filtered_data, place_selected, column_name, temp_column='A
     
     return stats_df
 
+def convert_coordinate(coord):
+    if 'N' in coord or 'E' in coord:
+        return float(coord[:-1])
+    elif 'S' in coord or 'W' in coord:
+        return -float(coord[:-1])
+    return float(coord)
+
+def add_average_annual_temperature(df, date_column, temperature_column, temperature_column_name="Average_annual_temperature"):
+    df['Year'] = df[date_column].dt.year
+    avg_temp_per_city = df.groupby(['City', 'Year'])[temperature_column].mean().reset_index()
+    avg_temp_per_city = avg_temp_per_city.rename(columns={temperature_column: temperature_column_name})
+    df = df.merge(avg_temp_per_city, on=['City', 'Year'], how='right')
+    df = df.drop(columns=['Year'])
+    return df
+
+
+def add_color_column_with_hex(df, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
+    """
+    Adds a column with HEX color values based on the temperature using the specified colormap.
+    
+    Parameters:
+    - df: The DataFrame to which the color column is added.
+    - temperature_column: The column name that contains the temperature data (default 'Average_annual_temperature').
+    - colormap_name: The colormap to use for mapping temperatures to colors (default "coolwarm").
+    
+    Returns:
+    - df: The DataFrame with the added 'Color_hex' column containing HEX color values.
+    """
+    # Get the colormap and normalize the temperature data
+    colormap = plt.get_cmap(colormap_name)
+    norm = plt.Normalize(df[temperature_column].min(), df[temperature_column].max())
+    
+    # Apply the colormap to the temperature values and convert to HEX
+    df["Color_hex"] = df[temperature_column].apply(
+        lambda temp: "#{:02x}{:02x}{:02x}".format(
+            int(colormap(norm(temp))[0] * 255),  # Red
+            int(colormap(norm(temp))[1] * 255),  # Green
+            int(colormap(norm(temp))[2] * 255)   # Blue
+        )
+    )
+    return df
+
+def get_unique_city_data(df):
+    unique_cities = df.drop_duplicates(subset=['City'])
+    return unique_cities

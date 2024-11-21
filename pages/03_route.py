@@ -4,38 +4,20 @@ import streamlit as st
 import folium
 from streamlit_folium import st_folium
 from shapely.geometry import Point
+from modules.data_processing import *
+from modules.visualization import *
+from modules.operations import *
+
+# Set the page title
+st.set_page_config(page_title="Route", layout="wide")
+st.title("OPTIMAL ROUTE BETWEEN TWO CITIES")
 
 
 
 
 
 
-def load_data(table_name):
-    if table_name == "country":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByCountry.csv')
-    elif table_name == "city":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByCity.csv')
-    elif table_name == "major_city":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByMajorCity.csv')
-    elif table_name == "state":
-        return pd.read_csv('./dataset/GlobalLandTemperaturesByState.csv')
-    elif table_name == "global_temp_country":
-        return pd.read_csv('./dataset/GlobalTemperatures.csv')
-    else:
-        return None
 
-def convert_to_date(df, column_name):
-    df[column_name] = pd.to_datetime(df[column_name], errors='coerce')
-    return df
-
-def year_slider(min_year=1751, max_year=2011):
-    selected_year = st.slider(
-        "Select a year",
-        min_value=min_year,
-        max_value=max_year,
-        value=2002
-    )
-    return selected_year
 
 def get_month_range(df, date_column, year):
     df_year = df[df[date_column].dt.year == year]
@@ -43,14 +25,7 @@ def get_month_range(df, date_column, year):
     max_month = df_year[date_column].max().month
     return min_month, max_month
 
-def month_slider(min_month, max_month):
-    selected_month = st.slider(
-        "Select a month",
-        min_value=min_month,
-        max_value=max_month,
-        value=9
-    )
-    return selected_month
+
 
 def filter_data_by_year_month(df, date_column, year, month):
     df_filtered = df[(df[date_column].dt.year == year) & (df[date_column].dt.month == month)]
@@ -67,12 +42,7 @@ def city_selector(df, column_name, phrase, exclude_city=None):
     selected_city = st.selectbox(phrase, cities)
     return selected_city
 
-def convert_coordinate(coord):
-    if 'N' in coord or 'E' in coord:
-        return float(coord[:-1])
-    elif 'S' in coord or 'W' in coord:
-        return -float(coord[:-1])
-    return float(coord)
+
 
 
 # Funzione per creare un GeoDataFrame con le geometrie delle città
@@ -221,11 +191,11 @@ col1, col2 = st.columns(2)
 selected_df = load_data(selected_table)
 
 
-selected_table = convert_to_date(selected_df, "dt")
+selected_table = convert_to_datetype(selected_df, "dt")
 
 
 with col1:
-    selected_year = year_slider()
+    selected_year = year_monoslider()
 
 
 min_month, max_month = get_month_range(selected_table, "dt", selected_year)
@@ -248,10 +218,6 @@ with col2:
 
 
 path= find_path(filtered_df, start, arrive)
-
-
-
-
 
 
 st.header("Map of the optimal path")

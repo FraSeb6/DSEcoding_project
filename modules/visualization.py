@@ -1,6 +1,8 @@
 import matplotlib.pyplot as plt
 import pandas as pd
 import streamlit as st
+import folium
+from streamlit_folium import st_folium
 from modules.operations import *
 
 def display_chart(filtered_data, place_selected, place_column='City', temp_column='AverageTemperature'):
@@ -133,3 +135,40 @@ def plot_temperature_range_histogram(data, places_column='City', period_column='
     
     return fig  # Restituisce la figura da visualizzare in Streamlit
 
+
+
+
+##########################################################################################
+####  MAP VISUALIZATION  ################################################################
+
+# Function to add markers to the map (excluding rows with NaN temperature)
+def create_map_with_markers(df):
+    # Filter out rows where Average_annual_temperature is NaN
+    df = df.dropna(subset=['Average_annual_temperature'])#I noticed that, there was some point where the temperature was not available
+
+    # Create the map centered on the mean latitude and longitude of the cities
+    m = folium.Map(location=[df['Latitude'].mean(), df['Longitude'].mean()], zoom_start=2)
+
+    # Add a marker for each city
+    for _, column in df.iterrows():
+        popup_text = f"""
+        <b>City:</b> {column['City']}<br>
+        <b>Country:</b> {column['Country']}<br>
+        <b>Temperature:</b> {column['Average_annual_temperature']}°C<br>
+        <b>Coordinates:</b> ({column['Latitude']}, {column['Longitude']})
+        """
+        folium.CircleMarker(
+            location=[column['Latitude'], column['Longitude']],
+            radius=8,
+            color=column['Color_hex'],
+            fill=True,
+            fill_color=column['Color_hex'],
+            fill_opacity=0.8,
+            popup=folium.Popup(popup_text, max_width=200)
+        ).add_to(m)  # Add the marker to the map
+
+    return m  # Return the map created
+
+def display_map(df):
+    map_with_markers = create_map_with_markers(df)
+    st_folium(map_with_markers, width=1200, height=800)
