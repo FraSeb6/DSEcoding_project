@@ -18,3 +18,7 @@ Each project should present the following characteristics:
 5. usage of a scientific computing library (e.g. numPy)
 6. usage of a data visualization library (e.g. matplotlib)
 7. BONUS - usage of a web app creation framework (e.g. streamlit)
+
+if you want try the project download that dataset
+https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data
+add it in the same level of the pages and modules 

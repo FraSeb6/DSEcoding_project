@@ -12,10 +12,6 @@ from modules.visualization import *
 st.set_page_config(page_title="Map", layout="wide")
 st.title("MAP OF GLOBAL TEMPERATURE DATA")
 
-
-
-
-
 # Streamlit app interface
 selected_table = st.selectbox(
     "Select a table",
