@@ -1,12 +1,9 @@
 import pandas as pd
 import numpy as np
 import matplotlib.pyplot as plt
-import geopandas as gpd
-import streamlit as st
 import folium
+import streamlit as st
 from streamlit_folium import st_folium
-from folium.plugins import MarkerCluster
-
 
 def load_data(table_name):
     if table_name == "country":
@@ -76,12 +73,12 @@ def conveart_corrdinates_floattype(df, lat_column, lon_column):
     df[lon_column] = pd.to_numeric(df[lon_column], errors='coerce')
     return df
 
-
 def add_color_column(df, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
     colormap = plt.get_cmap(colormap_name)
     norm = plt.Normalize(df[temperature_column].min(), df[temperature_column].max())
     df["Color"] = df[temperature_column].apply(lambda temp: colormap(norm(temp)))
     return df
+
 
 def rgba_to_hex(rgba):
     r, g, b, a = rgba
@@ -91,8 +88,35 @@ def get_unique_city_data(df):
     unique_cities = df.drop_duplicates(subset=['City'])
     return unique_cities
 
+# Function to add markers to the map (excluding rows with NaN temperature)
+def create_map_with_markers(df):
+    # Filter out rows where Average_annual_temperature is NaN
+    df = df.dropna(subset=['Average_annual_temperature'])#I noticed that, there was some point where the temperature was not available
 
+    # Create the map centered on the mean latitude and longitude of the cities
+    m = folium.Map(location=[df['Latitude'].mean(), df['Longitude'].mean()], zoom_start=2)
 
+    # Add a marker for each city
+    for _, column in df.iterrows():
+        popup_text = f"""
+        <b>City:</b> {column['City']}<br>
+        <b>Country:</b> {column['Country']}<br>
+        <b>Temperature:</b> {column['Average_annual_temperature']}°C<br>
+        <b>Coordinates:</b> ({column['Latitude']}, {column['Longitude']})
+        """
+        folium.CircleMarker(
+            location=[column['Latitude'], column['Longitude']],
+            radius=8,
+            color=column['Color_hex'],
+            fill=True,
+            fill_color=column['Color_hex'],
+            fill_opacity=0.8,
+            popup=folium.Popup(popup_text, max_width=200)
+        ).add_to(m)  # Add the marker to the map
+
+    return m  # Return the map created
+
+# Streamlit app interface
 selected_table = st.selectbox(
     "Select a table",
     ["major_city", "city"]
@@ -100,76 +124,44 @@ selected_table = st.selectbox(
 
 st.write(f"Displaying data from {selected_table} table")
 
-dataframe_selected= load_data(selected_table)
+# Load the dataset
+dataframe_selected = load_data(selected_table)
 
+# Convert 'dt' column to datetime
 dataframe_selected = convert_to_datetype(dataframe_selected, "dt")
 
+# Get the range of years from the dataset
 min_year, max_year = get_year_range(dataframe_selected, "dt")
 
+# Year slider to select the desired year
 selected_year = year_slider(min_year, max_year)
 
+# Filter the data by the selected year
 dataframe_filtered_by_year = filter_data_by_year(dataframe_selected, "dt", selected_year)
 
+# Add the average annual temperature to the filtered data
 dataframe_filtered_by_year = add_average_annual_temperature(dataframe_filtered_by_year, "dt", "AverageTemperature")
 
+# Convert latitude and longitude to numeric coordinates
 dataframe_filtered_by_year = convert_coordinates(dataframe_filtered_by_year, "Latitude", "Longitude")
-
-#da inserire nelle rispettive funzioni 
 dataframe_filtered_by_year = conveart_corrdinates_floattype(dataframe_filtered_by_year, "Latitude", "Longitude")
 
+# Add a color column based on the average annual temperature
 dataframe_filtered_by_year = add_color_column(dataframe_filtered_by_year)
 
+# Convert RGBA to hex color format
 dataframe_filtered_by_year['Color_hex'] = dataframe_filtered_by_year['Color'].apply(rgba_to_hex)
 
+# Get unique city data (removes duplicates)
 dataframe_filtered_by_year = get_unique_city_data(dataframe_filtered_by_year)
 
 
 
-st.write("Data types of each column:")
-st.write(dataframe_filtered_by_year.dtypes)
-print(dataframe_selected.dtypes)
-st.write(dataframe_filtered_by_year)
+# Create the map with the markers
+map_with_markers = create_map_with_markers(dataframe_filtered_by_year)
 
+# Display the map
+st_folium(map_with_markers, width=700, height=500)
 
-m = folium.Map(location=[dataframe_filtered_by_year['Latitude'].mean(), dataframe_filtered_by_year['Longitude'].mean()], zoom_start=2)
-
-# Aggiungi un cluster di marker
-#    marker_cluster = MarkerCluster().add_to(m)
-
-
-#save the date in cache to avoid to reload the data every time
-
-
-for _, column in dataframe_filtered_by_year.iterrows():
-    #create a pop up text
-    popup_text = f"""
-    <b>City:</b> {column['City']}<br>
-    <b>Country:</b> {column['Country']}<br>
-    <b>Temperature:</b> {column['Average_annual_temperature']}°C<br>
-    <b>Coordinates:</b> ({column['Latitude']}, {column['Longitude']})
-    """
-    #add a marker to the map
-    folium.CircleMarker(
-        location=[column['Latitude'], column['Longitude']],
-        radius=8,
-        color=column['Color_hex'],
-        fill=True,
-        fill_color=column['Color_hex'],
-        fill_opacity=0.8,
-        popup=folium.Popup(popup_text, max_width=200)
-    ).add_to(m) #add the marker to the cluster |     m or marker_cluster
-    
-#add the layer control
-st_folium(m, width=700, height=500)
-
-st.write(":red[DISCLAIMER: the coordinates are not accurate].")
-
-# Rimozione delle righe con valori mancanti in AverageTemperature
-#clean_data = data.dropna(subset=['AverageTemperature']).copy()
-
-
-
-
-
-
-
+# Disclaimer note
+st.write(":red[DISCLAIMER: The coordinates are not accurate.]")
