@@ -26,18 +26,18 @@ def convert_to_datetype(df, column_name):
     df[column_name] = pd.to_datetime(df[column_name], errors='coerce')
     return df
 
-# Funzione per ottenere l'intervallo degli anni da una colonna di date
+# Function to get the year range from a date column
 def get_year_range(df, date_column):
     """
-    Ottieni l'intervallo di anni da una colonna di date.
+    Get the range of years from a date column.
     
     Parameters:
-    - df: DataFrame contenente i dati.
-    - date_column: Il nome della colonna contenente le date.
+    - df: DataFrame containing the data.
+    - date_column: The name of the column containing the dates.
     
     Returns:
-    - min_year: Il primo anno (minimo).
-    - max_year: L'ultimo anno (massimo).
+    - min_year: The first (minimum) year in the dataset.
+    - max_year: The last (maximum) year, the nearest to ours days.
     """
     min_year = df[date_column].min().year
     max_year = df[date_column].max().year
@@ -45,59 +45,81 @@ def get_year_range(df, date_column):
 
 
 
-# Funzione per filtrare i dati in base all'anno selezionato
+# Function to filter data based on the selected year range
 def filter_data_by_year(df, date_column, min_year, max_year):
     """
-    Filtra i dati in base a un intervallo di anni selezionato.
+    Filters the data based on a selected year range.
     
     Parameters:
-    - df: DataFrame contenente i dati.
-    - date_column: Il nome della colonna contenente le date.
-    - min_year: L'anno minimo dell'intervallo.
-    - max_year: L'anno massimo dell'intervallo.
+    - df: DataFrame containing the data.
+    - date_column: The name of the column containing the dates.
+    - min_year: The minimum year of the range.
+    - max_year: The maximum year of the range.
     
     Returns:
-    - df_filtered: Il DataFrame filtrato per l'intervallo di anni selezionato.
+    - df_filtered: The filtered DataFrame based on the selected year range.
     """
-    # Assicurati che la colonna 'date_column' sia in formato datetime
+    # Ensure the 'date_column' is in datetime format
     if not pd.api.types.is_datetime64_any_dtype(df[date_column]):
         df[date_column] = pd.to_datetime(df[date_column], errors='coerce')
-    
-    # Filtra i dati in base all'intervallo di anni
-    df_filtered = df[(df[date_column].dt.year >= min_year) & (df[date_column].dt.year <= max_year)]
-    
+    # Filter the data based on the year range
+    df_filtered = df[(df[date_column].dt.year >= min_year) & (df[date_column].dt.year <= max_year)]    
     return df_filtered
 
-def generate_stats_df(filtered_data, place_selected, column_name, temp_column='AverageTemperature'):
-            
-    stats_data = []
-    for city in place_selected:
-        # Filtra i dati per ogni città
-        city_data = filtered_data[filtered_data[column_name] == city]
-        
-        # Calcola le statistiche descrittive per la città
-        city_stats = descriptive_stats(city_data, temp_column)
-        
-        # Aggiungi il nome della città alle statistiche
-        city_stats[column_name] = city
-        
-        # Aggiungi le statistiche calcolate alla lista
-        stats_data.append(city_stats)
 
-    # Crea il DataFrame delle statistiche descrittive
+def generate_stats_df(filtered_data, place_selected, column_name, temp_column='AverageTemperature'):
+    """
+    Generates a DataFrame with descriptive statistics for the selected places.
+    
+    Parameters:
+    - filtered_data: The DataFrame containing the filtered data.
+    - place_selected: The list of places (cities, countries, etc.) for which the statistics are generated.
+    - column_name: The column name that identifies the places (e.g., 'City').
+    - temp_column: The column name containing the temperature data (default 'AverageTemperature').
+    
+    Returns:
+    - stats_df: The DataFrame with descriptive statistics for the selected places.
+    """
+    
+    stats_data = []
+    for place in place_selected:
+        # Filter the data for each place
+        place_data = filtered_data[filtered_data[column_name] == place]
+        
+        # Calculate descriptive statistics for the place
+        place_stats = descriptive_stats(place_data, temp_column)# function from operations.py
+        
+        # Add the name of the place to the statistics
+        place_stats[column_name] = place
+        
+        # Add the calculated statistics to the list
+        stats_data.append(place_stats)
+
+    # Create the DataFrame with the descriptive statistics
     stats_df = pd.DataFrame(stats_data)
 
-    # Imposta la colonna column_name come indice
+    # Set the 'column_name' (e.g., 'City') as the index
     stats_df.set_index(column_name, inplace=True)
     
     return stats_df
 
+
 def convert_coordinate(coord):
+    """
+    Converts a coordinate with a direction (N/S/E/W) to a numeric format.
+    
+    Parameters:
+    - coord: The coordinate string that may include a direction (e.g., '40.7128N', '74.0060W').
+    
+    Returns:
+    - A float value representing the numeric coordinate, with negative values for South and West.
+    """
     if 'N' in coord or 'E' in coord:
-        return float(coord[:-1])
+        return float(coord[:-1])  # If it's North or East, just remove the direction and convert to float
     elif 'S' in coord or 'W' in coord:
-        return -float(coord[:-1])
-    return float(coord)
+        return -float(coord[:-1])  # If it's South or West, remove the direction and make it negative
+    return float(coord)  # If there is no direction, just return the float of the coordinate
+
 
 def add_average_annual_temperature(df, date_column, temperature_column, temperature_column_name="Average_annual_temperature"):
     df['Year'] = df[date_column].dt.year
@@ -123,7 +145,6 @@ def add_color_column_with_hex(df, temperature_column='Average_annual_temperature
     # Get the colormap and normalize the temperature data
     colormap = plt.get_cmap(colormap_name)
     norm = plt.Normalize(df[temperature_column].min(), df[temperature_column].max())
-    
     # Apply the colormap to the temperature values and convert to HEX
     df["Color_hex"] = df[temperature_column].apply(
         lambda temp: "#{:02x}{:02x}{:02x}".format(
