@@ -72,70 +72,67 @@ def plot_temperature_trends(data, places_selected, place_column='City', temp_col
     return plt
 
 
-
 def plot_temperature_range_histogram(data, places_column='City', period_column='dt', temp_column='AverageTemperature'):
     """
-    Funzione per mostrare un istogramma delle top 10 entità (città, paesi, stati, ecc.) con i maggiori range di temperatura.
-    Se ci sono meno di 10 entità, mostra tutte le entità disponibili.
+    Function to display a histogram of the top 10 entities (cities, countries, states, etc.) 
+    with the largest temperature ranges. If there are fewer than 10 entities, it shows all available entities.
     
-    Parametri:
-    - data: DataFrame contenente i dati delle entità con informazioni sulla temperatura.
-    - places_column: La colonna che rappresenta l'entità geografica (default 'City').
-    - period_column: La colonna che rappresenta il periodo (default 'dt').
-    - temp_column: La colonna che contiene i dati delle temperature (default 'AverageTemperature').
+    Parameters:
+    - data: DataFrame containing the data of entities with temperature information.
+    - places_column: The column that represents the geographic entity (default 'City').
+    - period_column: The column that represents the period (default 'dt').
+    - temp_column: The column containing temperature data (default 'AverageTemperature').
 
-    Restituisce:
-    - fig: La figura dell'istogramma.
+    Returns:
+    - fig: The figure of the histogram.
     """
     temperature_ranges = []
 
-    # Converti la colonna del periodo in formato datetime, se non lo è già
+    # Convert the period column to datetime format if it's not already
     if not pd.api.types.is_datetime64_any_dtype(data[period_column]):
         data[period_column] = pd.to_datetime(data[period_column], errors='coerce')
 
-    # Ottieni le entità uniche (città, paesi, stati, ecc.)
+    # Get the unique entities (cities, countries, states, etc.)
     places_available = data[places_column].unique()
 
     for place in places_available:
         place_data = data[data[places_column] == place]
         
-        # Raggruppa i dati per anno e calcola la temperatura massima e minima per ogni entità
+        # Group the data by year and calculate the max and min temperature for each entity
         place_data['Year'] = place_data[period_column].dt.year
         place_range = place_data.groupby('Year')[temp_column].agg(['max', 'min'])
         
-        # Calcola il range di temperatura per ogni entità (max - min)
+        # Calculate the temperature range for each entity (max - min)
         place_range['TemperatureRange'] = place_range['max'] - place_range['min']
         
-        # Aggiungi il range massimo per l'entità
+        # Add the maximum temperature range for the entity
         temperature_ranges.append({
             places_column: place,
-            'TemperatureRange': place_range['TemperatureRange'].max()  # Usa il range massimo
+            'TemperatureRange': place_range['TemperatureRange'].max()  # Use the maximum range
         })
 
-    # Crea un DataFrame con i risultati
+    # Create a DataFrame with the results
     temp_range_df = pd.DataFrame(temperature_ranges)
 
-    # Ordina le entità per range di temperatura in ordine decrescente
+    # Sort the entities by temperature range in descending order
     temp_range_df_sorted = temp_range_df.sort_values(by='TemperatureRange', ascending=False)
 
-    # Se ci sono meno di 10 entità, seleziona tutte le entità disponibili
+    # If there are fewer than 10 entities, select all available entities
     top_n = min(10, len(temp_range_df_sorted))
     temp_range_df_sorted = temp_range_df_sorted.head(top_n)
 
-    # Crea l'istogramma
+    # Create the histogram
     fig, ax = plt.subplots(figsize=(12, 6))
     ax.bar(temp_range_df_sorted[places_column], temp_range_df_sorted['TemperatureRange'], color='skyblue')
 
-    # Aggiungi titolo e etichette
+    # Add title and labels
     ax.set_title(f'Top {top_n} {places_column.capitalize()}s with the Largest Temperature Range', fontsize=16)
     ax.set_xlabel(places_column.capitalize(), fontsize=12)
     ax.set_ylabel('Temperature Range (°C)', fontsize=12)
     ax.grid(True, linestyle='--', alpha=0.7)
     plt.xticks(rotation=45)
     
-    return fig  # Restituisce la figura da visualizzare in Streamlit
-
-
+    return fig  # Returns the figure to be displayed in Streamlit
 
 
 ##########################################################################################
@@ -252,3 +249,9 @@ def visualize_path(geo_data, path, start_city, end_city):
     ).add_to(m)
 
     return m
+
+def display_optimal_path_map(filtered_df, path, start, arrive):
+    st.header("Map of the optimal path")
+    map = visualize_path(filtered_df, path, start, arrive)
+    st_folium(map, width=1200, height=800)
+    

@@ -1,9 +1,5 @@
-import pandas as pd
-import geopandas as gpd
 import streamlit as st
-import folium
 from streamlit_folium import st_folium
-from shapely.geometry import Point
 from modules.data_processing import *
 from modules.visualization import *
 from modules.operations import *
@@ -11,11 +7,6 @@ from modules.operations import *
 # Set the page title
 st.set_page_config(page_title="Route", layout="wide")
 st.title("OPTIMAL ROUTE BETWEEN TWO CITIES")
-
-
-
-
-
 
 selected_table = st.selectbox(
     "Select a table",
@@ -54,6 +45,4 @@ with col2:
 path= find_path(filtered_df, start, arrive)
 
 
-st.header("Map of the optimal path")
-mapa = visualize_path(filtered_df, path, start, arrive)
-st_folium(mapa, width=1200, height=800)
+display_optimal_path_map(filtered_df, path, start, arrive)

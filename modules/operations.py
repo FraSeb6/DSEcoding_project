@@ -2,93 +2,89 @@ import numpy as np
 import pandas as pd
 import streamlit as st
 
+
 def descriptive_stats(data, temp_column):
     """
-    Calcola le statistiche descrittive per una colonna di temperature in un DataFrame.
-    Aggiunge anche il range di temperatura (max - min).
+    Calculates descriptive statistics for a temperature column in a DataFrame.
+    Also adds the temperature range (max - min).
 
     Parameters:
-    - data: DataFrame contenente i dati.
-    - temp_column: Il nome della colonna contenente le temperature.
+    - data: DataFrame containing the data.
+    - temp_column: The name of the column containing the temperatures.
 
     Returns:
-    - stats: Dizionario contenente le statistiche descrittive (min, max, mean, median, std, range).
+    - stats: Dictionary containing the descriptive statistics (min, max, mean, median, std, range).
     """
-    # Rimuovi NaN
+    # Remove NaN values
     temperatures = data[temp_column].dropna()
-    
-    # Calcola le statistiche descrittive
+
+    # Calculate descriptive statistics
     stats = {
-        "Minima": np.min(temperatures),
-        "Massima": np.max(temperatures),
-        "Range": np.max(temperatures) - np.min(temperatures),
-        "Media": np.mean(temperatures),
-        "Q1": np.percentile(temperatures, 25),
-        "Mediana": np.median(temperatures),
-        "Q3": np.percentile(temperatures, 75),
-        "Deviazione Standard": np.std(temperatures),
-        "IQR": np.percentile(temperatures, 75) - np.percentile(temperatures, 25),
-        "Numero di Osservazioni": len(temperatures),
-        "Varianza": np.var(temperatures),
-        "Coefficiente di Variazione": np.std(temperatures) / np.mean(temperatures),
+        "Min": np.min(temperatures), # Minimum temperature
+        "Max": np.max(temperatures), # Maximum temperature
+        "Range": np.max(temperatures) - np.min(temperatures), # Temperature range
+        "Mean": np.mean(temperatures), # Mean temperature
+        "Q1": np.percentile(temperatures, 25), # First quartile
+        "Median": np.median(temperatures), # Median temperature
+        "Q3": np.percentile(temperatures, 75),  # Third quartile
+        "Std Dev": np.std(temperatures), # Standard deviation
+        "IQR": np.percentile(temperatures, 75) - np.percentile(temperatures, 25), # Interquartile range
+        "Number of Observations": len(temperatures), # Number of observations
+        "Variance": np.var(temperatures), # Variance
+        "Coefficient of Variation": np.std(temperatures) / np.mean(temperatures), # Coefficient of variation
     }
-    
+
     return stats
 
-
-
-def multieselector_place(data, colum_name, default_place=['New York', 'Los Angeles']):
+def multieselector_place(data, column_name, default_place=['New York', 'Los Angeles']):
     """
-    Restituisce la lista delle città selezionate dall'utente nel multiselect.
-    Se l'utente non seleziona altre città, restituisce le due città predefinite.
+    Returns the list of cities selected by the user in the multiselect.
+    If the user does not select any cities, it returns the two default cities.
 
     Parameters:
-    - data: DataFrame contenente i dati delle città.
-    - default_place: Lista delle due città predefinite (di default 'New York' e 'Los Angeles').
+    - data: DataFrame containing the city data.
+    - default_place: List of two default cities (default 'New York' and 'Los Angeles').
 
     Returns:
-    - place_selected: Lista delle città selezionate dall'utente.
+    - place_selected: List of cities selected by the user.
     """
-    # Multiselect per selezionare le città, con due città di default
+    # Multiselect for selecting cities, with two default cities
     place_selected = st.multiselect(
-        "Seleziona le città",
-        options=data[colum_name].unique(),
-        default=default_place  # Impostiamo due città di default
+        "Select the cities",
+        options=data[column_name].unique(),
+        default=default_place  # Set two default cities
     )
 
-    # Se non è stata selezionata nessuna città, usiamo le città predefinite
+    # If no cities are selected, use the default cities
     if len(place_selected) == 0:
-        st.warning("Per favore, seleziona almeno una città.")  # Mostra un avviso se nessuna città è selezionata
-        place_selected = default_place  # Se nessuna città è selezionata, rimpiazziamo con le città di default
+        st.warning("Please select at least one city.")  # Show a warning if no city is selected
+        place_selected = default_place  # If no cities are selected, replace with default cities
 
     return place_selected
 
-def filter_data_by_oneyear(df, date_column, year):
-    df_filtered = df[df[date_column].dt.year == year]
-    return df_filtered
 
-# Funzione per creare uno slider che consenta di selezionare un anno
 def year_slider(min_year, max_year):
     """
-    Crea uno slider per selezionare un intervallo of years.
+    Creates a slider to select a range of years.
     
     Parameters:
-    - min_year: L'anno minimo.
-    - max_year: L'anno massimo.
+    - min_year: The minimum year.
+    - max_year: The maximum year.
     
     Returns:
-    - selected_year: L'anno selezionato tramite lo slider.
+    - selected_year_range: The selected year range from the slider.
     """
     selected_year_range = st.slider(
-        "Seleziona un intervallo di anni",
+        "Select a range of years",
         min_value=min_year,
         max_value=max_year,
         value=(min_year, max_year),
-        step=1
+        step=1  # Set the step value to 1
     )
     return selected_year_range
 
-def year_monoslider(min_year=1751, max_year=2011):
+
+def year_monoslider(min_year=1760, max_year=2011):
     selected_year = st.slider(
         "Select a year",
         min_value=min_year,
@@ -96,6 +92,12 @@ def year_monoslider(min_year=1751, max_year=2011):
         value=2002
     )
     return selected_year
+
+def get_month_range(df, date_column, year):
+    df_year = df[df[date_column].dt.year == year]
+    min_month = df_year[date_column].min().month
+    max_month = df_year[date_column].max().month
+    return min_month, max_month
 
 def month_slider(min_month, max_month):
     selected_month = st.slider(
@@ -106,7 +108,6 @@ def month_slider(min_month, max_month):
     )
     return selected_month
 
-# Function to find the optimal path between two cities based on a combined score of average temperature and distance to the destination
 def find_path(geo_data, start_city, end_city, w_T=0.4, w_D=0.6):
     """
     Finds the optimal path between two cities based on a score that combines
@@ -119,7 +120,7 @@ def find_path(geo_data, start_city, end_city, w_T=0.4, w_D=0.6):
     if start.empty or end.empty:
         raise ValueError("One of the specified cities is not in the dataset.")
 
-    # Initialize the path and the current point
+    # Initialize the path and current point
     path = [start_city]
     current = start
 
@@ -153,3 +154,6 @@ def find_path(geo_data, start_city, end_city, w_T=0.4, w_D=0.6):
         path.append(next_city['City'])
         current = geo_data[geo_data['City'] == next_city['City']]
     return path
+
+
+

@@ -8,85 +8,78 @@ from modules.operations import *
 st.set_page_config(page_title="Dataset Table", layout="wide")
 st.title("TABLE OF GLOBAL TEMPERATURE DATA")
 
-# Carica il dataset delle città
+# Load the dataset of cities
 dataset_option = st.sidebar.radio(
-    "Seleziona un dataset da visualizzare",
+    "Select a dataset to display",
     options=["major_city", "state", "country", "city"]
 )
 
-# Carica il dataset
+# Load the dataset
 data = load_data(dataset_option)
 
 if dataset_option == "major_city" or dataset_option == "city":
     st.write(f"Dataset: {dataset_option}")
     
-    # Converte la colonna 'dt' in formato datetime
+    # Convert the 'dt' column to datetime format
     data = convert_to_datetype(data, 'dt')
 
-    # Ottieni l'intervallo degli anni
+    # Get the year range
     min_year, max_year = get_year_range(data, 'dt')
 
-    # Ottieni la lista delle città selezionate, con le due città di default
+    # Get the list of selected cities, with the two default cities
     cities_selected = multieselector_place(data, 'City', default_place=['New York', 'Los Angeles'])
 
-    # Filtro dei dati in base alle città selezionate
+    # Filter the data based on the selected cities
     filtered_data_for_desc = filter_data_by_year(data, 'dt', min_year, max_year)
     filtered_data_for_desc = filtered_data_for_desc[filtered_data_for_desc['City'].isin(cities_selected)]
 
-    # Calcola le statistiche descrittive per le città selezionate
+    # Calculate descriptive statistics for the selected cities
     stats_df = generate_stats_df(filtered_data_for_desc, cities_selected, 'City', 'AverageTemperature')
 
-    # Mostra la tabella delle statistiche descrittive con i nomi delle città come indice
-    st.write("Statistiche Descrittive delle Temperature per le Città Selezionate:")
+    # Display the descriptive statistics table with city names as the index
+    st.write("Descriptive Statistics of Temperatures for Selected Cities:")
     st.dataframe(stats_df)
 
-    # Range slider per selezionare un intervallo di anni
+    # Range slider to select a range of years
     selected_year_range = year_slider(min_year, max_year)
 
-    # Filtra i dati in base all'intervallo di anni selezionato
+    # Filter the data based on the selected year range
     filtered_data = filter_data_by_year(data, 'dt', selected_year_range[0], selected_year_range[1])
 
-    # Mostra il grafico in base alla selezione
-    # Per tracciare il grafico selezionato per le città
+    # Display the chart based on the selection
     display_chart(filtered_data, place_selected=cities_selected, place_column='City', temp_column='AverageTemperature')
-
-
 
 elif dataset_option == "state" or dataset_option == "country":
     st.write(f"Dataset: {dataset_option}")
     
-    # Converte la colonna 'dt' in formato datetime
+    # Convert the 'dt' column to datetime format
     data = convert_to_datetype(data, 'dt')
 
-    # Ottieni l'intervallo degli anni
+    # Get the year range
     min_year, max_year = get_year_range(data, 'dt')
 
-    # Ottieni la lista delle città selezionate, con le due città di default
+    # Get the list of selected countries, with the two default countries
     countries_selected = multieselector_place(data, 'Country', default_place=['United States', 'Canada'])
 
-    # Filtro dei dati in base alle città selezionate
+    # Filter the data based on the selected countries
     filtered_data = filter_data_by_year(data, 'dt', min_year, max_year)
     filtered_data = filtered_data[filtered_data['Country'].isin(countries_selected)]
 
-    # Calcola le statistiche descrittive per le città selezionate
+    # Calculate descriptive statistics for the selected countries
     stats_df = generate_stats_df(filtered_data, countries_selected, 'Country')
 
-    # Mostra la tabella delle statistiche descrittive con i nomi delle città come indice
-    st.write("Statistiche Descrittive delle Temperature per le Città Selezionate:")
+    # Display the descriptive statistics table with country names as the index
+    st.write("Descriptive Statistics of Temperatures for Selected Countries:")
     st.dataframe(stats_df)
 
-    # Range slider per selezionare un intervallo di anni
+    # Range slider to select a range of years
     selected_year_range = year_slider(min_year, max_year)
 
-    # Filtra i dati in base all'intervallo di anni selezionato
+    # Filter the data based on the selected year range
     filtered_data = filter_data_by_year(data, 'dt', selected_year_range[0], selected_year_range[1])
 
-    # Mostra il grafico in base alla selezione
-    # Per tracciare il grafico selezionato per le città
-    # Per tracciare il grafico selezionato per i paesi
+    # Display the chart based on the selection
     display_chart(filtered_data, place_selected=countries_selected, place_column='Country', temp_column='AverageTemperature')
 
-
-
 else:
-    st.write("Dataset non valido o assente.")
+    st.write("Invalid or missing dataset.")

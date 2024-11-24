@@ -11,9 +11,6 @@ st.title("Welcome to the Global Temperature Data Analysis Project")
 st.markdown("""
     This project allows you to explore temperature data for various global regions, including cities, countries, and states.
     The data spans multiple years, and you can filter the data based on the year and region of interest.
-    
-    Use the **dataset selection** in the sidebar to choose which dataset to analyze. 
-    Once selected, use the **year slider** to choose the specific year you want to view.
 """)
 
 # Sidebar for dataset selection
@@ -24,8 +21,8 @@ dataset_option = st.sidebar.radio(
 
 # Load the selected dataset
 st.write(f"Displaying data from the **{dataset_option}** dataset")
-data = load_data(dataset_option)
-data = data.dropna()
+data = load_data(dataset_option) 
+data = data.dropna() # Drop rows with missing values
 data = convert_to_datetype(data, 'dt')
 col1, col2 = st.columns([3,1])
 if data is not None:

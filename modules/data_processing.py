@@ -66,6 +66,10 @@ def filter_data_by_year(df, date_column, min_year, max_year):
     df_filtered = df[(df[date_column].dt.year >= min_year) & (df[date_column].dt.year <= max_year)]    
     return df_filtered
 
+def filter_data_by_oneyear(df, date_column, year):
+    df_filtered = df[df[date_column].dt.year == year]
+    return df_filtered
+
 
 def generate_stats_df(filtered_data, place_selected, column_name, temp_column='AverageTemperature'):
     """
@@ -104,6 +108,19 @@ def generate_stats_df(filtered_data, place_selected, column_name, temp_column='A
     return stats_df
 
 
+def add_average_annual_temperature(df, date_column, temperature_column, temperature_column_name="Average_annual_temperature"):
+    #Extract the year from the date_column and add it as a new column 'Year' 
+    df['Year'] = df[date_column].dt.year
+    #Calculate the average temperature per city and year 
+    avg_temp_per_city = df.groupby(['City', 'Year'])[temperature_column].mean().reset_index()
+    #Rename the calculated average temperature column 
+    avg_temp_per_city = avg_temp_per_city.rename(columns={temperature_column: temperature_column_name})
+    #Merge the calculated averages back into the original DataFrame
+    df = df.merge(avg_temp_per_city, on=['City', 'Year'], how='right')
+    #Drop the 'Year' column, as it is no longer needed 
+    df = df.drop(columns=['Year'])
+    return df
+
 def convert_coordinate(coord):
     """
     Converts a coordinate with a direction (N/S/E/W) to a numeric format.
@@ -119,16 +136,6 @@ def convert_coordinate(coord):
     elif 'S' in coord or 'W' in coord:
         return -float(coord[:-1])  # If it's South or West, remove the direction and make it negative
     return float(coord)  # If there is no direction, just return the float of the coordinate
-
-
-def add_average_annual_temperature(df, date_column, temperature_column, temperature_column_name="Average_annual_temperature"):
-    df['Year'] = df[date_column].dt.year
-    avg_temp_per_city = df.groupby(['City', 'Year'])[temperature_column].mean().reset_index()
-    avg_temp_per_city = avg_temp_per_city.rename(columns={temperature_column: temperature_column_name})
-    df = df.merge(avg_temp_per_city, on=['City', 'Year'], how='right')
-    df = df.drop(columns=['Year'])
-    return df
-
 
 def add_color_column_with_hex(df, temperature_column='Average_annual_temperature', colormap_name="coolwarm"):
     """
@@ -159,16 +166,17 @@ def get_unique_city_data(df):
     unique_cities = df.drop_duplicates(subset=['City'])
     return unique_cities
 
-def get_month_range(df, date_column, year):
-    df_year = df[df[date_column].dt.year == year]
-    min_month = df_year[date_column].min().month
-    max_month = df_year[date_column].max().month
-    return min_month, max_month
-
-def filter_data_by_year_month(df, date_column, year, month):
+def filter_data_by_year_month(df, date_column, year, month, temperature_column='AverageTemperature'):
     df_filtered = df[(df[date_column].dt.year == year) & (df[date_column].dt.month == month)]
-    df_filtered = df_filtered.dropna(subset=['AverageTemperature'])
+    df_filtered = df_filtered.dropna(subset=[temperature_column])
     return df_filtered
+
+
+# Function to create a GeoDataFrame with city geometries
+def create_geodf(df, lat_col='Latitude', lon_col='Longitude'):
+    geometry = [Point(xy) for xy in zip(df[lon_col], df[lat_col])]
+    geo_data = gpd.GeoDataFrame(df, geometry=geometry)
+    return geo_data
 
 def city_selector(df, column_name, phrase, exclude_city=None):
     cities = df[column_name].unique()
@@ -178,9 +186,3 @@ def city_selector(df, column_name, phrase, exclude_city=None):
                                                                     #if city != exclude_city: This condition filters out any city that matches the exclude_city value.
     selected_city = st.selectbox(phrase, cities)
     return selected_city
-
-# Function to create a GeoDataFrame with city geometries
-def create_geodf(df, lat_col='Latitude', lon_col='Longitude'):
-    geometry = [Point(xy) for xy in zip(df['Longitude'], df['Latitude'])]
-    geo_data = gpd.GeoDataFrame(df, geometry=geometry)
-    return geo_data
