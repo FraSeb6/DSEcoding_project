@@ -167,6 +167,7 @@ def create_map_with_markers(df):
     return m  # Return the map created
 
 def display_map(df):
+    st.header("City Temperature Map")
     map_with_markers = create_map_with_markers(df)
     st_folium(map_with_markers, width=1200, height=800)
 

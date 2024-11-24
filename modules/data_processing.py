@@ -73,7 +73,7 @@ def filter_data_by_oneyear(df, date_column, year):
 
 def generate_stats_df(filtered_data, place_selected, column_name, temp_column='AverageTemperature'):
     """
-    Generates a DataFrame with descriptive statistics for the selected places.
+    Generates a table with descriptive statistics for the selected places.
     
     Parameters:
     - filtered_data: The DataFrame containing the filtered data.
