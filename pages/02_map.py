@@ -55,4 +55,4 @@ display_map(dataframe_filtered_by_year)
 
 
 # Disclaimer note
-st.write(":red[DISCLAIMER: The coordinates are not accurate.]")
+st.write(":red[DISCLAIMER: The coordinates are not accurate in the dataset.]")
